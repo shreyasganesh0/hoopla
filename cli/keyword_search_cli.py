@@ -3,6 +3,7 @@
 import argparse
 import json
 import string
+from nltk.stem import PorterStemmer
 
 
 def main() -> None:
@@ -22,15 +23,22 @@ def main() -> None:
         case "search":
 
             print(f"Searching for: {args.query}")
+
             f_movies = open("data/movies.json", "r")
-            f_stopwords = open("data/stopwords.txt", "r")
             data = json.load(f_movies)
+
+            f_stopwords = open("data/stopwords.txt", "r")
             stopwords = f_stopwords.read().splitlines()
+
+            stemmer = PorterStemmer()
+
             movies_list = []
             limit = 5
 
             t_table = str.maketrans(dict.fromkeys(string.punctuation, None))
-            cleaner = lambda my_str:[word for word in my_str.lower().translate(t_table).split() if word and word not in stopwords]
+            cleaner = lambda my_str:[stemmer.stem(word) 
+                                     for word in my_str.lower().translate(t_table).split()
+                                     if word and word not in stopwords]
 
             query_list = cleaner(args.query)
 
