@@ -18,15 +18,19 @@ def main() -> None:
     
 
     match args.command:
+
         case "search":
+
             print(f"Searching for: {args.query}")
-            fp = open("data/movies.json", "r")
-            data = json.load(fp)
+            f_movies = open("data/movies.json", "r")
+            f_stopwords = open("data/stopwords.txt", "r")
+            data = json.load(f_movies)
+            stopwords = f_stopwords.read().splitlines()
             movies_list = []
             limit = 5
 
             t_table = str.maketrans(dict.fromkeys(string.punctuation, None))
-            cleaner = lambda my_str:[word for word in my_str.lower().translate(t_table).split() if word]
+            cleaner = lambda my_str:[word for word in my_str.lower().translate(t_table).split() if word and word not in stopwords]
 
             query_list = cleaner(args.query)
 
