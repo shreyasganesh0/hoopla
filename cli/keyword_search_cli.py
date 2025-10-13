@@ -36,35 +36,40 @@ def main() -> None:
 
             print(f"Searching for: {args.query}")
 
-
-
             movies_list = []
             limit = 5
-
 
             query_list = inverted_index.tokenizer(args.query, stopwords, stemmer)
 
             movie_count = 0
 
-            for movie in movies: 
+            for query_token in query_list:
 
-                title_list = inverted_index.tokenizer(movie["title"], stopwords, stemmer)
 
-                if any(query_word in title_word for query_word in query_list for title_word in title_list):
-                    movies_list.append(movie)
-                    movie_count += 1
+                inv_idx = inverted_index.InvertedIndex(stopwords, stemmer)
+                try:
+                    inv_idx.load()
+                except Exception as e:
+                    print(e)
+                    return
 
-                if (movie_count >= limit):
+                docs = inv_idx.get_documents(query_token)
 
-                    break
+                docs_count = 0
+                docs_list = []
+                for doc in docs:
 
-            movies_list.sort(key = lambda a : a["id"])
+                    docs_list.append(f"title: {doc["title"]}, id:{doc["id"]}")
+                    docs_count += 1
 
-            i = 1
+                    if (docs_count >= limit):
+                        i = 1
 
-            for mv in movies_list:
-                print(f"{i}. {mv["title"]}") 
-                i +=1
+                        for docs in docs_list:
+                            print(f"{i}. {docs}") 
+                            i +=1
+
+                        break
 
         case "build":
 
@@ -72,8 +77,6 @@ def main() -> None:
 
             inv_idx.build(movies)
             inv_idx.save()
-
-            print(f"First document for token 'merida' = {inv_idx.get_documents("merida")[0]}")
 
         case _:
             parser.print_help()

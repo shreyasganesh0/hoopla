@@ -34,7 +34,13 @@ class InvertedIndex:
 
         term = term.lower()
 
-        return sorted(list(self.index.get(term, [])))
+        doc_ids = sorted(list(self.index.get(term, [])))
+
+        ret_list = []
+        for doc_id in doc_ids:
+
+            ret_list.append(self.docmap.get(doc_id, {}))
+        return ret_list
     
     def build(self, movies):
 
@@ -52,11 +58,22 @@ class InvertedIndex:
         except FileExistsError:
             print("dir cache exists")
 
-        f_idx = open("cache/index.pkl", "wb")
-        f_docmap = open("cache/docmap.pkl", "wb")
+        with open("cache/index.pkl", "wb") as f_idx:
+            pickle.dump(self.index, f_idx)
+        with open("cache/docmap.pkl", "wb")as f_docmap:
+            pickle.dump(self.docmap, f_docmap)
 
-        pickle.dump(self.index, f_idx)
-        pickle.dump(self.docmap, f_docmap)
+    def load(self):
+
+        try:
+            with open("cache/index.pkl", "rb") as f_idx:
+                self.index = pickle.load(f_idx)
+            with open("cache/docmap.pkl", "rb") as f_docmap:
+                self.docmap = pickle.load(f_docmap)
+
+        except Exception as e:
+
+            raise Exception(e)
 
         
 
