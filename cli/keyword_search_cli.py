@@ -2,9 +2,9 @@
 
 import argparse
 import json
-import string
 from nltk.stem import PorterStemmer
 
+import inverted_index
 
 def main() -> None:
 
@@ -15,8 +15,20 @@ def main() -> None:
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     search_parser.add_argument("query", type=str, help="Search query")
 
+    build_parser = subparsers.add_parser("build", help="Build inverted index and save it to disk")
+
     args = parser.parse_args()
     
+    f_movies = open("data/movies.json", "r")
+    data = json.load(f_movies)
+    movies = data["movies"]
+    f_movies.close()
+
+    f_stopwords = open("data/stopwords.txt", "r")
+    stopwords = f_stopwords.read().splitlines()
+    f_stopwords.close()
+    
+    stemmer = PorterStemmer()
 
     match args.command:
 
@@ -24,29 +36,19 @@ def main() -> None:
 
             print(f"Searching for: {args.query}")
 
-            f_movies = open("data/movies.json", "r")
-            data = json.load(f_movies)
 
-            f_stopwords = open("data/stopwords.txt", "r")
-            stopwords = f_stopwords.read().splitlines()
-
-            stemmer = PorterStemmer()
 
             movies_list = []
             limit = 5
 
-            t_table = str.maketrans(dict.fromkeys(string.punctuation, None))
-            cleaner = lambda my_str:[stemmer.stem(word) 
-                                     for word in my_str.lower().translate(t_table).split()
-                                     if word and word not in stopwords]
 
-            query_list = cleaner(args.query)
+            query_list = inverted_index.tokenizer(args.query, stopwords, stemmer)
 
             movie_count = 0
 
-            for movie in data["movies"]:
+            for movie in movies: 
 
-                title_list = cleaner(movie["title"])
+                title_list = inverted_index.tokenizer(movie["title"], stopwords, stemmer)
 
                 if any(query_word in title_word for query_word in query_list for title_word in title_list):
                     movies_list.append(movie)
@@ -63,6 +65,15 @@ def main() -> None:
             for mv in movies_list:
                 print(f"{i}. {mv["title"]}") 
                 i +=1
+
+        case "build":
+
+            inv_idx = inverted_index.InvertedIndex(stopwords, stemmer)
+
+            inv_idx.build(movies)
+            inv_idx.save()
+
+            print(f"First document for token 'merida' = {inv_idx.get_documents("merida")[0]}")
 
         case _:
             parser.print_help()
