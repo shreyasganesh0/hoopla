@@ -1,4 +1,5 @@
 import pickle
+import math
 import os
 import string
 from collections import Counter
@@ -42,10 +43,15 @@ class InvertedIndex:
 
         return self.term_frequencies.get(doc_id, Counter()).get(token, 0)
 
+    def get_idf(self, term: str):
+
+        doc_count = len(self.docmap.keys())
+        term_doc_count = len(self.get_documents(term))
+        return math.log((doc_count + 1) / (term_doc_count + 1))
 
     def get_documents(self, term):
 
-        token = self.tokenize(term)
+        token = self.tokenizer(term)
 
         if len(token) > 1: raise exception("too many tokens in terms")
 

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 from nltk.stem import PorterStemmer
 
 import inverted_index
@@ -20,6 +21,9 @@ def main() -> None:
     tf_parser = subparsers.add_parser("tf", help="Get term frequencies for given term")
     tf_parser.add_argument("doc_id", type=int, help="document where term exists")
     tf_parser.add_argument("term", type=str, help="Token to search for")
+
+    idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency for term")
+    idf_parser.add_argument("term", type=str, help="Token to search for")
 
     args = parser.parse_args()
     
@@ -90,6 +94,19 @@ def main() -> None:
             except Exception as e:
                     print(e)
                     return
+
+        case "idf":
+
+            try:
+                inv_idx.load()
+
+                idf = inv_idx.get_idf(args.term)
+                print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
+
+            except Exception as e:
+
+                      print(e)
+                      return
 
         case _:
             parser.print_help()
