@@ -22,6 +22,10 @@ def main() -> None:
     tf_parser.add_argument("doc_id", type=int, help="document where term exists")
     tf_parser.add_argument("term", type=str, help="Token to search for")
 
+    tf_idf_parser = subparsers.add_parser("tfidf", help="Get term frequencies - idf for given term")
+    tf_idf_parser.add_argument("doc_id", type=int, help="document where term exists")
+    tf_idf_parser.add_argument("term", type=str, help="Token to search for")
+
     idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency for term")
     idf_parser.add_argument("term", type=str, help="Token to search for")
 
@@ -90,7 +94,8 @@ def main() -> None:
 
             try:
                 inv_idx.load()
-                print(f"term frequency of {args.term} in {args.doc_id} is {inv_idx.get_tf(args.doc_id, args.term)}")
+                tf = inv_idx.get_tf(args.doc_id, args.term)
+                print(f"Term frequency of {args.term} in {args.doc_id} is {tf}")
             except Exception as e:
                     print(e)
                     return
@@ -102,6 +107,21 @@ def main() -> None:
 
                 idf = inv_idx.get_idf(args.term)
                 print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
+
+            except Exception as e:
+
+                      print(e)
+                      return
+
+        case "tfidf":
+
+            try:
+                inv_idx.load()
+
+                tf = inv_idx.get_tf(args.doc_id, args.term)
+                idf = inv_idx.get_idf(args.term)
+                tf_idf = tf * idf
+                print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}")
 
             except Exception as e:
 
