@@ -17,6 +17,10 @@ def main() -> None:
 
     build_parser = subparsers.add_parser("build", help="Build inverted index and save it to disk")
 
+    tf_parser = subparsers.add_parser("tf", help="Get term frequencies for given term")
+    tf_parser.add_argument("doc_id", type=int, help="document where term exists")
+    tf_parser.add_argument("term", type=str, help="Token to search for")
+
     args = parser.parse_args()
     
     f_movies = open("data/movies.json", "r")
@@ -29,6 +33,7 @@ def main() -> None:
     f_stopwords.close()
     
     stemmer = PorterStemmer()
+    inv_idx = inverted_index.InvertedIndex(stopwords, stemmer)
 
     match args.command:
 
@@ -39,14 +44,13 @@ def main() -> None:
             movies_list = []
             limit = 5
 
-            query_list = inverted_index.tokenizer(args.query, stopwords, stemmer)
+            query_list = inv_idx.tokenizer(args.query)
 
             movie_count = 0
 
             for query_token in query_list:
 
 
-                inv_idx = inverted_index.InvertedIndex(stopwords, stemmer)
                 try:
                     inv_idx.load()
                 except Exception as e:
@@ -73,10 +77,19 @@ def main() -> None:
 
         case "build":
 
-            inv_idx = inverted_index.InvertedIndex(stopwords, stemmer)
 
             inv_idx.build(movies)
             inv_idx.save()
+
+        case "tf":
+
+
+            try:
+                inv_idx.load()
+                print(f"term frequency of {args.term} in {args.doc_id} is {inv_idx.get_tf(args.doc_id, args.term)}")
+            except Exception as e:
+                    print(e)
+                    return
 
         case _:
             parser.print_help()
