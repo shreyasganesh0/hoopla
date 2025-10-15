@@ -33,6 +33,11 @@ def main() -> None:
     bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=inverted_index.BM25_K1, 
                                 help="Tunable BM25 K1 parameter")
 
+    bm25_idf_parser = subparsers.add_parser(
+      'bm25idf', help="Get BM25 IDF score for a given term"
+    )
+    bm25_idf_parser.add_argument("term", type=str, help="Term to get BM25 IDF score for")
+
     idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency for term")
     idf_parser.add_argument("term", type=str, help="Token to search for")
 
@@ -141,6 +146,19 @@ def main() -> None:
 
                 bm25tf = inv_idx.get_bm25_tf(args.doc_id, args.term, args.k1)
                 print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
+
+            except Exception as e:
+
+                      print(e)
+                      return
+
+        case "bm25idf":
+
+            try:
+                inv_idx.load()
+
+                bm25idf = inv_idx.get_bm25_idf(args.term)
+                print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
 
             except Exception as e:
 

@@ -15,6 +15,7 @@ class InvertedIndex:
         self.stopwords = stopwords
         self.stemmer = stemmer
         self.term_frequencies = {}
+        self.N = 0
 
     def __add_document(self, doc_id, text):
 
@@ -46,9 +47,18 @@ class InvertedIndex:
 
     def get_idf(self, term: str):
 
-        doc_count = len(self.docmap.keys())
+        doc_count = self.N
         term_doc_count = len(self.get_documents(term))
         return math.log((doc_count + 1) / (term_doc_count + 1))
+
+    def get_bm25_idf(self, term: str) -> float:
+
+        df = len(self.get_documents(term))
+
+        bm25idf = math.log(1 + ((self.N - df + 0.5) / (df + 0.5)))
+
+        return bm25idf
+
 
     def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
 
@@ -82,6 +92,7 @@ class InvertedIndex:
 
             self.__add_document(movie["id"], inp_text)
             self.docmap[movie["id"]] = movie
+            self.N += 1
 
     def save(self):
 
@@ -106,6 +117,8 @@ class InvertedIndex:
                 self.docmap = pickle.load(f_docmap)
             with open("cache/term_frequencies.pkl", "rb") as f_term_freq:
                 self.term_frequencies = pickle.load(f_term_freq)
+
+            self.N = len(self.docmap.keys())
 
         except Exception as e:
 
