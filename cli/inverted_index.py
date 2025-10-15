@@ -4,6 +4,7 @@ import os
 import string
 from collections import Counter
 
+BM25_K1 = 1.5
 
 class InvertedIndex:
 
@@ -48,6 +49,14 @@ class InvertedIndex:
         doc_count = len(self.docmap.keys())
         term_doc_count = len(self.get_documents(term))
         return math.log((doc_count + 1) / (term_doc_count + 1))
+
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+
+        tf = self.get_tf(doc_id, term)
+
+        bm25tf = (tf * (k1 + 1)) / (tf + k1)
+
+        return bm25tf
 
     def get_documents(self, term):
 

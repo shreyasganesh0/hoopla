@@ -7,6 +7,7 @@ from nltk.stem import PorterStemmer
 
 import inverted_index
 
+
 def main() -> None:
 
 
@@ -25,6 +26,12 @@ def main() -> None:
     tf_idf_parser = subparsers.add_parser("tfidf", help="Get term frequencies - idf for given term")
     tf_idf_parser.add_argument("doc_id", type=int, help="document where term exists")
     tf_idf_parser.add_argument("term", type=str, help="Token to search for")
+
+    bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get the bm25 term frequencies")
+    bm25_tf_parser.add_argument("doc_id", type=int, help="document where term exists")
+    bm25_tf_parser.add_argument("term", type=str, help="Token to search for")
+    bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=inverted_index.BM25_K1, 
+                                help="Tunable BM25 K1 parameter")
 
     idf_parser = subparsers.add_parser("idf", help="Get inverse document frequency for term")
     idf_parser.add_argument("term", type=str, help="Token to search for")
@@ -122,6 +129,18 @@ def main() -> None:
                 idf = inv_idx.get_idf(args.term)
                 tf_idf = tf * idf
                 print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}")
+
+            except Exception as e:
+
+                      print(e)
+                      return
+        case "bm25tf":
+
+            try:
+                inv_idx.load()
+
+                bm25tf = inv_idx.get_bm25_tf(args.doc_id, args.term, args.k1)
+                print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
 
             except Exception as e:
 
