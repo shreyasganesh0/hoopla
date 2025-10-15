@@ -32,6 +32,12 @@ def main() -> None:
     bm25_tf_parser.add_argument("term", type=str, help="Token to search for")
     bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=inverted_index.BM25_K1, 
                                 help="Tunable BM25 K1 parameter")
+    bm25_tf_parser.add_argument("b", type=float, nargs='?', default=inverted_index.BM25_B, 
+                                help="Tunable BM25 b parameter")
+
+    bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+    bm25search_parser.add_argument("--limit", type=int, help="score count limit", default=5)
 
     bm25_idf_parser = subparsers.add_parser(
       'bm25idf', help="Get BM25 IDF score for a given term"
@@ -165,6 +171,17 @@ def main() -> None:
                       print(e)
                       return
 
+        case "bm25search":
+
+            try:
+                inv_idx.load()
+
+                inv_idx.bm25_search(args.query, args.limit)
+
+            except Exception as e:
+
+                      print(e)
+                      return
         case _:
             parser.print_help()
 

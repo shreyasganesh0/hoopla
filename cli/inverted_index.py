@@ -5,6 +5,7 @@ import string
 from collections import Counter
 
 BM25_K1 = 1.5
+BM25_B = 0.75
 
 class InvertedIndex:
 
@@ -15,6 +16,7 @@ class InvertedIndex:
         self.stopwords = stopwords
         self.stemmer = stemmer
         self.term_frequencies = {}
+        self.doc_lengths = {}
         self.N = 0
 
     def __add_document(self, doc_id, text):
@@ -25,6 +27,8 @@ class InvertedIndex:
 
             self.index.setdefault(token, set()).add(doc_id) # add doc to doc_id set
             self.term_frequencies.setdefault(doc_id, Counter())[token] += 1
+            val = self.doc_lengths.get(doc_id, 0.0) 
+            self.doc_lengths[doc_id] = val + 1.0
 
     def tokenizer(self, my_str):
 
@@ -58,13 +62,25 @@ class InvertedIndex:
         bm25idf = math.log(1 + ((self.N - df + 0.5) / (df + 0.5)))
 
         return bm25idf
+    
+    def __get_avg_doc_length(self) -> float:
+
+        sum = 0.0
+
+        for doc_len in self.doc_lengths.values():
+
+            sum += doc_len
+
+        return sum/float(len(self.doc_lengths.values()))
 
 
-    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1, b: float = BM25_B) -> float:
 
         tf = self.get_tf(doc_id, term)
 
-        bm25tf = (tf * (k1 + 1)) / (tf + k1)
+        length_norm = 1 - b + b * (self.doc_lengths.get(doc_id, 0.0) / self.__get_avg_doc_length())
+
+        bm25tf = (tf * (k1 + 1)) / (tf + k1 * length_norm)
 
         return bm25tf
 
@@ -83,6 +99,44 @@ class InvertedIndex:
 
             ret_list.append(self.docmap.get(doc_id, {}))
         return ret_list
+
+    def bm25(self, doc_id, term):
+
+        bm25_idf = self.get_bm25_idf(term)
+        bm25_tf = self.get_bm25_tf(doc_id, term, BM25_K1, BM25_B)
+
+        return bm25_tf * bm25_idf
+    
+    def bm25_search(self, query, limit):
+
+        query_tokens = self.tokenizer(query)
+        if len(query_tokens) == 0: raise Exception("too few tokens")
+
+        scores = {}
+
+        for token in query_tokens:
+
+            curr_score = 0
+
+            for doc_id in self.index.get(token, []):
+
+                curr_score = self.bm25(doc_id, token)
+
+                val = scores.get(doc_id, 0.0)
+                scores[doc_id] = val + curr_score
+
+        score_sort = sorted(scores.items(), key = lambda a: a[1], reverse = True)
+
+        i = 1
+        for curr_doc_id, curr_doc_score in score_sort[:limit]:
+
+            curr_doc = self.docmap[curr_doc_id]
+
+            print(f"{i}. ({curr_doc["id"]}) {curr_doc["title"]} - Score: {curr_doc_score: .2f}")
+
+            i += 1
+
+
     
     def build(self, movies):
 
@@ -107,6 +161,8 @@ class InvertedIndex:
             pickle.dump(self.docmap, f_docmap)
         with open("cache/term_frequencies.pkl", "wb") as f_term_freq:
             pickle.dump(self.term_frequencies, f_term_freq)
+        with open("cache/doc_lengths.pkl", "wb") as f_doc_lengths:
+            pickle.dump(self.doc_lengths, f_doc_lengths)
 
     def load(self):
 
@@ -117,6 +173,8 @@ class InvertedIndex:
                 self.docmap = pickle.load(f_docmap)
             with open("cache/term_frequencies.pkl", "rb") as f_term_freq:
                 self.term_frequencies = pickle.load(f_term_freq)
+            with open("cache/doc_lengths.pkl", "rb") as f_doc_lengths:
+                self.doc_lengths = pickle.load(f_doc_lengths)
 
             self.N = len(self.docmap.keys())
 
