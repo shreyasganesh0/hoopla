@@ -24,6 +24,8 @@ class SemanticSearch:
     
     def build_embeddings(self, documents):
 
+        print("building")
+
         doc_list = []
 
         for v in documents:
@@ -48,14 +50,24 @@ class SemanticSearch:
 
         if os.path.exists("cache/movie_embeddings.py"):
 
+            print("loading embeddings from file")
             self.embeddings = np.load("cache/movie_embeddings.py")
 
-            if len(self.embeddings) != len(documents):
+        if len(self.embeddings) == len(documents):
 
-                return self.embeddings
+            return self.embeddings
         else:
 
             return self.build_embeddings(documents)
+
+def embed_query_text(query):
+
+    sem_search = SemanticSearch()
+
+    embedding = sem_search.generate_embeddings(query)
+    print(f"Query: {query}")
+    print(f"First 5 dimensions: {embedding[:5]}")
+    print(f"Shape: {embedding.shape}")
 
 def verify_embeddings():
 
