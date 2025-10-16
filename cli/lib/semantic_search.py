@@ -60,6 +60,59 @@ class SemanticSearch:
 
             return self.build_embeddings(documents)
 
+    def search(self, query, limit):
+
+        if len(self.embeddings) == 0:
+
+            raise ValueError("No embeddings loaded. Call `load_or_create_embeddings` first.")
+
+        query_embedding = self.generate_embeddings(query)
+
+        scores_list = []
+
+        for i in range(len(self.embeddings)):
+
+            curr_score = cosine_similarity(query_embedding, self.embeddings[i])
+            scores_list.append((curr_score, self.documents[i]))
+
+        scores_list.sort(key = lambda a: a[0], reverse = True)
+
+        ret_list = []
+
+        for (score, doc) in scores_list[:limit]:
+
+            ret_list.append({"score": score, "title": doc["title"], "description": doc["description"]})
+
+        return ret_list
+
+def search_query(query, limit):
+
+    sem_search = SemanticSearch()
+
+    documents = []
+    with open("data/movies.json", "r") as f_movies:
+        data = json.load(f_movies)
+        documents = data["movies"]
+    embeddings = sem_search.load_or_create_embeddings(documents)
+    res = sem_search.search(query, limit)
+
+    i = 1 
+    for d in res:
+
+        print(f"{i}. {d["title"]}: ({d["score"]})\n   {d["description"]}\n")
+        i += 1
+
+
+def cosine_similarity(vec1, vec2):
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+
+    return dot_product / (norm1 * norm2)
+
 def embed_query_text(query):
 
     sem_search = SemanticSearch()
