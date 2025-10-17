@@ -86,7 +86,7 @@ class SemanticSearch:
 
         return ret_list
 
-def chunk(text, chunk_size):
+def chunk(text, chunk_size, overlap):
 
     pattern = f'[{re.escape(string.whitespace)}]'
     text_list = [s for s in re.split(pattern, text) if s]
@@ -94,15 +94,17 @@ def chunk(text, chunk_size):
     print(f"Chunking {len(text)} characters")
 
     x = 1
-    for i in range(0,len(text_list), chunk_size): 
+    i = 0
+    while (i < len(text_list)):
 
-        curr_word_list = text_list[i:(i+1)*chunk_size]
+        curr_word_list = text_list[i:i + chunk_size]
 
         curr_print = f"{x}." 
         for word in curr_word_list:
             curr_print += " " + word
         print(curr_print)
         x += 1
+        i += (chunk_size - overlap)
 
 def search_query(query, limit):
 

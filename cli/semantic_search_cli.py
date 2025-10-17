@@ -28,6 +28,7 @@ def main():
     chunk_parser = subparsers.add_parser("chunk", help="Split documents into chunks before encoding")
     chunk_parser.add_argument("text", type=str, help="Text to chunk")
     chunk_parser.add_argument("--chunk-size", type=int, help="Chunk size to split documents on", default=200)
+    chunk_parser.add_argument("--overlap", type=int, help="Number of words to overlap into the next chunk", default=0)
     args = parser.parse_args()
 
     match args.command:
@@ -54,7 +55,7 @@ def main():
 
         case "chunk":
 
-            chunk(args.text, args.chunk_size)
+            chunk(args.text, args.chunk_size, args.overlap)
 
         case _:
             parser.print_help()
