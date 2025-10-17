@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer
 import string
 import json
 import os
+import re
 import numpy as np
 
 class SemanticSearch:
@@ -84,6 +85,24 @@ class SemanticSearch:
             ret_list.append({"score": score, "title": doc["title"], "description": doc["description"]})
 
         return ret_list
+
+def chunk(text, chunk_size):
+
+    pattern = f'[{re.escape(string.whitespace)}]'
+    text_list = [s for s in re.split(pattern, text) if s]
+
+    print(f"Chunking {len(text)} characters")
+
+    x = 1
+    for i in range(0,len(text_list), chunk_size): 
+
+        curr_word_list = text_list[i:(i+1)*chunk_size]
+
+        curr_print = f"{x}." 
+        for word in curr_word_list:
+            curr_print += " " + word
+        print(curr_print)
+        x += 1
 
 def search_query(query, limit):
 
