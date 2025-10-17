@@ -106,6 +106,24 @@ def chunk(text, chunk_size, overlap):
         x += 1
         i += (chunk_size - overlap)
 
+def sem_chunk(text, max_chunk_size, overlap):
+
+    pattern = r"(?<=[.!?])\s+"
+    sentence_list = [s for s in re.split(pattern, text) if s]
+
+    print(f"Semantically chunking {len(text)} characters")
+    x = 1
+    i = 0
+    while (i < len(sentence_list)):
+
+        curr_print = f"{x}." 
+        for sentence in sentence_list[i: i + max_chunk_size]:
+
+            curr_print += " " + sentence
+        print(curr_print)
+        x += 1
+        i += (max_chunk_size - overlap)
+
 def search_query(query, limit):
 
     sem_search = SemanticSearch()
