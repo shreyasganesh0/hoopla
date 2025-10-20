@@ -261,19 +261,32 @@ def chunk(text, chunk_size, overlap):
         i += (chunk_size - overlap)
 
 def sem_chunk(text, max_chunk_size, overlap):
+    text = text.strip()
+
+    if not text:
+        return []
 
     sentences = re.split(r"(?<=[.!?])\s+", text)
-    chunks = []
-    i = 0
     n_sentences = len(sentences)
 
-    while i < n_sentences - overlap:
-        chunk_sentences = sentences[i : i + max_chunk_size]
+    if n_sentences == 1 and not sentences[0].endswith(('.', '?', '!')):
+        return sentences
 
-        chunks.append(" ".join(chunk_sentences))
-
-        i += max_chunk_size - overlap
+    chunks = []
+    i = 0
+    while i < n_sentences: 
         
+        current_slice = sentences[i : i + max_chunk_size]
+
+        chunk_sentences = [s.strip() for s in current_slice if s.strip()]
+
+        if chunk_sentences:
+            chunks.append(" ".join(chunk_sentences))
+        
+        i += max_chunk_size - overlap
+
+    for i, chunk in enumerate(chunks, 1):
+        print(f"{i}. {chunk}")       
     return chunks
 
 def search_query(query, limit):
