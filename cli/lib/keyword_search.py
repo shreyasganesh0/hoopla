@@ -132,8 +132,6 @@ class InvertedIndex:
 
             curr_doc = self.docmap[curr_doc_id]
 
-            print(f"{i}. ({curr_doc["id"]}) {curr_doc["title"]} - Score: {curr_doc_score: .2f}")
-
             i += 1
         return score_sort[:limit]
 
