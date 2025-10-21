@@ -135,6 +135,7 @@ class InvertedIndex:
             print(f"{i}. ({curr_doc["id"]}) {curr_doc["title"]} - Score: {curr_doc_score: .2f}")
 
             i += 1
+        return score_sort[:limit]
 
 
     

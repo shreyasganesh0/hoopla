@@ -176,7 +176,7 @@ class ChunkedSemanticSearch(SemanticSearch):
             if curr_movie_idx not in movie_score_dict or movie_score_dict[curr_movie_idx] < curr_score:
                 movie_score_dict[curr_movie_idx] = curr_score 
 
-        sort_movies = sorted(movie_score_dict.items(), key = lambda a: a[1], reverse = True)[:limit]
+        sort_movies = sorted(movie_score_dict.items(), key = lambda a: a[1], reverse = True)
 
         results = []
 
@@ -185,7 +185,7 @@ class ChunkedSemanticSearch(SemanticSearch):
             res = format_search_result(curr_movie["id"], curr_movie["title"], curr_movie["description"][:100], score)
             results.append(res)
 
-        return results
+        return results[:limit]
 
 def search_chunked(query, limit):
 
