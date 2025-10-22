@@ -5,6 +5,7 @@ import json
 from nltk.stem import PorterStemmer
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
+from lib.llm_prompt import llm_prompt
 
 
 class HybridSearch:
@@ -168,19 +169,24 @@ def weighted_search(query, alpha, limit):
 def rrf_score(rank, k=60):
     return 1.0 / (k + rank)
 
-def rrf_search(query, k, limit):
+
+def rrf_search(query, k, limit, enhance):
     movies = []
     with open("data/movies.json", "r") as f:
         data = json.load(f)
         movies = data["movies"]
     hy_search = HybridSearch(movies)
 
-    res = hy_search.rrf_search(query, k, limit)
+    if enhance == "spell":
+
+        updated_query = llm_prompt(query)
+        print(f"Enhanced query (spell): '{query}' -> '{updated_query}'\n")
+
+    res = hy_search.rrf_search(updated_query, k, limit)
 
     for i, curr_res in enumerate(res[:limit], 1):
         doc_snippet = curr_res["document"].split("\n")[0][:100]
         
-        # Handle 0 ranks (not found) for printing
         bm25_rank_str = str(curr_res['bm25_rank']) if curr_res['bm25_rank'] > 0 else "N/A"
         sem_rank_str = str(curr_res['sem_rank']) if curr_res['sem_rank'] > 0 else "N/A"
 
