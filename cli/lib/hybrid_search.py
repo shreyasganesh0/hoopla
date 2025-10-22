@@ -177,10 +177,10 @@ def rrf_search(query, k, limit, enhance):
         movies = data["movies"]
     hy_search = HybridSearch(movies)
 
-    if enhance == "spell":
+    if enhance:
 
-        updated_query = llm_prompt(query)
-        print(f"Enhanced query (spell): '{query}' -> '{updated_query}'\n")
+        updated_query = llm_prompt(query, enhance)
+        print(f"Enhanced query ({enhance}): '{query}' -> '{updated_query}'\n")
 
     res = hy_search.rrf_search(updated_query, k, limit)
 
