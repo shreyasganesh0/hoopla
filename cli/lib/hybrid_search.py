@@ -185,7 +185,7 @@ def rrf_search(query, k, limit, enhance):
     res = hy_search.rrf_search(updated_query, k, limit)
 
     for i, curr_res in enumerate(res[:limit], 1):
-        doc_snippet = curr_res["document"].split("\n")[0][:100]
+        doc_snippet = curr_res["document"]
         
         bm25_rank_str = str(curr_res['bm25_rank']) if curr_res['bm25_rank'] > 0 else "N/A"
         sem_rank_str = str(curr_res['sem_rank']) if curr_res['sem_rank'] > 0 else "N/A"
