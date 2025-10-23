@@ -2,63 +2,101 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-def llm_prompt(query, mode):
+MODEL = "gemini-2.0-flash-001"
 
-    MODEL = "gemini-2.0-flash-001"
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    print(f"Using key {api_key[:6]}...")
+class Llm:
 
-    sys_prompt = ""
-    match(mode):
+    def __init__(self, model = MODEL):
 
-        case "spell":
-            sys_prompt = f"""Fix any spelling errors in this movie search query.
+        self.model = model
+        load_dotenv()
+        api_key = os.environ.get("GEMINI_API_KEY")
 
-                        Only correct obvious typos. Don't change correctly spelled words.
+        self.client = genai.Client(api_key=api_key)
 
-                        Query: "{query}"
 
-                        If no errors, return the original query.
-                        Corrected:"""
-        case "rewrite":
+    def enhance_prompt(self, query, mode):
 
-            sys_prompt = f"""Rewrite this movie search query to be more specific and searchable.
+        print(f"Using key {api_key[:6]}...")
 
-                        Original: "{query}"
+        sys_prompt = ""
+        match(mode):
 
-                        Consider:
-                        - Common movie knowledge (famous actors, popular films)
-                        - Genre conventions (horror = scary, animation = cartoon)
-                        - Keep it concise (under 10 words)
-                        - It should be a google style search query that's very specific
-                        - Don't use boolean logic
+            case "spell":
+                sys_prompt = f"""Fix any spelling errors in this movie search query.
 
-                        Examples:
+                            Only correct obvious typos. Don't change correctly spelled words.
 
-                        - "that bear movie where leo gets attacked" -> "The Revenant Leonardo DiCaprio bear attack"
-                        - "movie about bear in london with marmalade" -> "Paddington London marmalade"
-                        - "scary movie with bear from few years ago" -> "bear horror movie 2015-2020"
+                            Query: "{query}"
 
-                        Rewritten query:"""
-        case "expand":
-            
-            sys_prompt = f"""Expand this movie search query with related terms.
+                            If no errors, return the original query.
+                            Corrected:"""
+            case "rewrite":
 
-                        Add synonyms and related concepts that might appear in movie descriptions.
-                        Keep expansions relevant and focused.
-                        This will be appended to the original query.
+                sys_prompt = f"""Rewrite this movie search query to be more specific and searchable.
 
-                        Examples:
+                            Original: "{query}"
 
-                        - "scary bear movie" -> "scary horror grizzly bear movie terrifying film"
-                        - "action movie with bear" -> "action thriller bear chase fight adventure"
-                        - "comedy with bear" -> "comedy funny bear humor lighthearted"
+                            Consider:
+                            - Common movie knowledge (famous actors, popular films)
+                            - Genre conventions (horror = scary, animation = cartoon)
+                            - Keep it concise (under 10 words)
+                            - It should be a google style search query that's very specific
+                            - Don't use boolean logic
 
-                        Query: "{query}"
-                        """
+                            Examples:
 
-    client = genai.Client(api_key=api_key)
-    model_obj = client.models.generate_content(model = MODEL, contents = sys_prompt) 
+                            - "that bear movie where leo gets attacked" -> "The Revenant Leonardo DiCaprio bear attack"
+                            - "movie about bear in london with marmalade" -> "Paddington London marmalade"
+                            - "scary movie with bear from few years ago" -> "bear horror movie 2015-2020"
 
-    return model_obj.text
+                            Rewritten query:"""
+            case "expand":
+                
+                sys_prompt = f"""Expand this movie search query with related terms.
+
+                            Add synonyms and related concepts that might appear in movie descriptions.
+                            Keep expansions relevant and focused.
+                            This will be appended to the original query.
+
+                            Examples:
+
+                            - "scary bear movie" -> "scary horror grizzly bear movie terrifying film"
+                            - "action movie with bear" -> "action thriller bear chase fight adventure"
+                            - "comedy with bear" -> "comedy funny bear humor lighthearted"
+
+                            Query: "{query}"
+                            """
+
+        model_obj = self.client.models.generate_content(model = self.model, contents = sys_prompt) 
+
+        return model_obj.text
+
+    def rerank_prompt(self, doc, query, mode):
+
+        sys_prompt = ""
+        rank_list = []
+
+        match(mode):
+
+            case "individual":
+
+                sys_prompt = f"""Rate how well this movie matches the search query.
+
+                            Query: "{query}"
+                            Movie: {doc.get("title", "")} - {doc.get("document", "")}
+
+                            Consider:
+                            - Direct relevance to query
+                            - User intent (what they're looking for)
+                            - Content appropriateness
+
+                            Rate 0-10 (10 = perfect match).
+                            Give me ONLY the number in your response, no other text or explanation.
+
+                            Score:"""
+
+        model_obj = self.client.models.generate_content(model = self.model, contents = sys_prompt) 
+
+        return float(model_obj.text)
+

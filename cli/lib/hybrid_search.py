@@ -1,11 +1,12 @@
 # lib/hybrid_search.py
 
+import time
 import os
 import json
 from nltk.stem import PorterStemmer
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
-from lib.llm_prompt import llm_prompt
+from .llm_prompt import Llm
 
 
 class HybridSearch:
@@ -170,19 +171,31 @@ def rrf_score(rank, k=60):
     return 1.0 / (k + rank)
 
 
-def rrf_search(query, k, limit, enhance):
+def rrf_search(query, k, limit, enhance, rerank):
     movies = []
     with open("data/movies.json", "r") as f:
         data = json.load(f)
         movies = data["movies"]
     hy_search = HybridSearch(movies)
 
+    llm = Llm()
     if enhance:
 
-        updated_query = llm_prompt(query, enhance)
+        query = llm.enhance_prompt(query, enhance)
         print(f"Enhanced query ({enhance}): '{query}' -> '{updated_query}'\n")
 
-    res = hy_search.rrf_search(updated_query, k, limit)
+    res = hy_search.rrf_search(query, k, limit)
+
+    if rerank:
+
+        if rerank == "individual":
+            limit *= 5
+
+        for i, curr_res in enumerate(res[:limit], 1):
+            doc = curr_res["document"]
+
+            res[i - 1]["llm_rank"] = llm.rerank_prompt(curr_res, query, rerank)
+            time.sleep(3)
 
     for i, curr_res in enumerate(res[:limit], 1):
         doc_snippet = curr_res["document"]
@@ -191,6 +204,7 @@ def rrf_search(query, k, limit, enhance):
         sem_rank_str = str(curr_res['sem_rank']) if curr_res['sem_rank'] > 0 else "N/A"
 
         print(f"{i}. {curr_res['title']}")
+        print(f"   Rerank Score: {curr_res['llm_rank']:.3f}/10")
         print(f"   RRF Score: {curr_res['rrf_score']:.3f}")
         print(f"   BM25 Rank: {bm25_rank_str}, Semantic Rank: {sem_rank_str}")
         print(f"   {doc_snippet}...")
