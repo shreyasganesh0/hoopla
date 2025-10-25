@@ -95,8 +95,20 @@ class Llm:
                             Give me ONLY the number in your response, no other text or explanation.
 
                             Score:"""
+            case "batch":
+                sys_prompt = f"""Rank these movies by relevance to the search query.
+
+                            Query: "{query}"
+
+                            Movies:
+                            {doc}
+
+                            Return ONLY the IDs in order of relevance (best match first). Return a valid JSON list, nothing else. For example:
+
+                            [75, 12, 34, 2, 1]
+                            """
 
         model_obj = self.client.models.generate_content(model = self.model, contents = sys_prompt) 
 
-        return float(model_obj.text)
+        return model_obj.text
 

@@ -87,7 +87,7 @@ class HybridSearch:
 
     def rrf_search(self, query, k, limit=10):
 
-        fetch_limit = limit * 500
+        fetch_limit = limit 
         bm25_res = self._bm25_search(query, fetch_limit) 
         sem_res = self.semantic_search.search_chunks(query, fetch_limit)
 
@@ -170,7 +170,6 @@ def weighted_search(query, alpha, limit):
 def rrf_score(rank, k=60):
     return 1.0 / (k + rank)
 
-
 def rrf_search(query, k, limit, enhance, rerank):
     movies = []
     with open("data/movies.json", "r") as f:
@@ -180,31 +179,75 @@ def rrf_search(query, k, limit, enhance, rerank):
 
     llm = Llm()
     if enhance:
+        enhanced_query = llm.enhance_prompt(query, enhance)
+        print(f"Enhanced query ({enhance}): '{query}' -> '{enhanced_query}'\n")
+        query = enhanced_query 
+    
+    fetch_limit = limit
+    if rerank:
+        fetch_limit = limit * 5 
 
-        query = llm.enhance_prompt(query, enhance)
-        print(f"Enhanced query ({enhance}): '{query}' -> '{updated_query}'\n")
-
-    res = hy_search.rrf_search(query, k, limit)
+    res = hy_search.rrf_search(query, k, fetch_limit)
 
     if rerank:
-
+        
         if rerank == "individual":
-            limit *= 5
+            print(f"Reranking top {len(res)} results using individual method...\n")
+            for i, curr_res in enumerate(res):
+                doc = curr_res["document"]
+                try:
+                    res[i]["llm_rank"] = float(llm.rerank_prompt(curr_res, query, rerank))
+                except (ValueError, TypeError):
+                    res[i]["llm_rank"] = 0.0 
+                time.sleep(1) 
+            
+            res.sort(key = lambda a: a.get("llm_rank", 0.0), reverse=True)
 
-        for i, curr_res in enumerate(res[:limit], 1):
-            doc = curr_res["document"]
+        if rerank == "batch":
+            print(f"Reranking top {len(res)} results using batch method...\n")
+            docs_to_rerank = []
+            for curr_res in res: 
+                docs_to_rerank.append({
+                    "id": curr_res["id"],
+                    "title": curr_res["title"],
+                    "document": curr_res["document"]
+                })
+            
+            doc_list_str = json.dumps(docs_to_rerank, indent=2)
 
-            res[i - 1]["llm_rank"] = llm.rerank_prompt(curr_res, query, rerank)
-            time.sleep(3)
+            json_resp = llm.rerank_prompt(doc_list_str, query, rerank)
+            
+            try:
+                ranked_ids = json.loads(json_resp)
+                
+                rank_map = {doc_id: rank for rank, doc_id in enumerate(ranked_ids, 1)}
 
-    for i, curr_res in enumerate(res[:limit], 1):
-        doc_snippet = curr_res["document"]
+                for curr_res in res:
+                    curr_res["llm_rank"] = rank_map.get(curr_res["id"], 99999) 
+
+                res.sort(key = lambda a: a["llm_rank"])
+
+            except (json.JSONDecodeError, TypeError):
+                print(f"Error: Could not parse LLM response: {json_resp}")
+                for i, curr_res in enumerate(res):
+                    curr_res["llm_rank"] = i + 1
+                pass
+
+    # 4. Corrected Print Loop
+    print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
+    for i, curr_res in enumerate(res[:limit], 1): 
+        doc_snippet = curr_res["document"].split("\n")[0][:100]
         
         bm25_rank_str = str(curr_res['bm25_rank']) if curr_res['bm25_rank'] > 0 else "N/A"
         sem_rank_str = str(curr_res['sem_rank']) if curr_res['sem_rank'] > 0 else "N/A"
 
         print(f"{i}. {curr_res['title']}")
-        print(f"   Rerank Score: {curr_res['llm_rank']:.3f}/10")
+        
+        if rerank == "batch":
+            print(f"   Rerank Rank: {i}") 
+        elif rerank == "individual":
+            print(f"   Rerank Score: {curr_res.get('llm_rank', 0.0):.3f}/10")
+        
         print(f"   RRF Score: {curr_res['rrf_score']:.3f}")
         print(f"   BM25 Rank: {bm25_rank_str}, Semantic Rank: {sem_rank_str}")
         print(f"   {doc_snippet}...")
