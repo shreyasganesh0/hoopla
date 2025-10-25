@@ -7,6 +7,7 @@ from nltk.stem import PorterStemmer
 from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from .llm_prompt import Llm
+from sentence_transformers import CrossEncoder
 
 
 class HybridSearch:
@@ -231,9 +232,25 @@ def rrf_search(query, k, limit, enhance, rerank):
                 print(f"Error: Could not parse LLM response: {json_resp}")
                 for i, curr_res in enumerate(res):
                     curr_res["llm_rank"] = i + 1
-                pass
 
-    # 4. Corrected Print Loop
+    if rerank == "cross_encoder":
+            print(f"Reranking top {len(res)} results using cross_encoder method...\n")
+            
+            cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
+
+            pairs = []
+            for doc in res:
+                doc_string = f"{doc.get('title', '')} - {doc.get('document', '')}"
+                pairs.append([query, doc_string])
+
+            scores = cross_encoder.predict(pairs)
+
+            for i, curr_res in enumerate(res):
+                curr_res["cross_encoder_score"] = scores[i]
+            
+            res.sort(key=lambda x: x.get("cross_encoder_score", -float('inf')), reverse=True)
+
+
     print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
     for i, curr_res in enumerate(res[:limit], 1): 
         doc_snippet = curr_res["document"].split("\n")[0][:100]
@@ -247,7 +264,11 @@ def rrf_search(query, k, limit, enhance, rerank):
             print(f"   Rerank Rank: {i}") 
         elif rerank == "individual":
             print(f"   Rerank Score: {curr_res.get('llm_rank', 0.0):.3f}/10")
+        elif rerank == "cross_encoder":
+            # Print the new score in the requested format
+            print(f"   Cross Encoder Score: {curr_res.get('cross_encoder_score', 0.0):.3f}")
         
         print(f"   RRF Score: {curr_res['rrf_score']:.3f}")
         print(f"   BM25 Rank: {bm25_rank_str}, Semantic Rank: {sem_rank_str}")
         print(f"   {doc_snippet}...")
+
