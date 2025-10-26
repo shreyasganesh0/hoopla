@@ -171,6 +171,7 @@ def weighted_search(query, alpha, limit):
 def rrf_score(rank, k=60):
     return 1.0 / (k + rank)
 
+
 def rrf_search(query, k, limit, enhance, rerank):
     movies = []
     with open("data/movies.json", "r") as f:
@@ -181,7 +182,6 @@ def rrf_search(query, k, limit, enhance, rerank):
     llm = Llm()
     if enhance:
         enhanced_query = llm.enhance_prompt(query, enhance)
-        print(f"Enhanced query ({enhance}): '{query}' -> '{enhanced_query}'\n")
         query = enhanced_query 
     
     fetch_limit = limit
@@ -193,7 +193,6 @@ def rrf_search(query, k, limit, enhance, rerank):
     if rerank:
         
         if rerank == "individual":
-            print(f"Reranking top {len(res)} results using individual method...\n")
             for i, curr_res in enumerate(res):
                 doc = curr_res["document"]
                 try:
@@ -205,7 +204,6 @@ def rrf_search(query, k, limit, enhance, rerank):
             res.sort(key = lambda a: a.get("llm_rank", 0.0), reverse=True)
 
         if rerank == "batch":
-            print(f"Reranking top {len(res)} results using batch method...\n")
             docs_to_rerank = []
             for curr_res in res: 
                 docs_to_rerank.append({
@@ -229,12 +227,10 @@ def rrf_search(query, k, limit, enhance, rerank):
                 res.sort(key = lambda a: a["llm_rank"])
 
             except (json.JSONDecodeError, TypeError):
-                print(f"Error: Could not parse LLM response: {json_resp}")
                 for i, curr_res in enumerate(res):
                     curr_res["llm_rank"] = i + 1
 
     if rerank == "cross_encoder":
-            print(f"Reranking top {len(res)} results using cross_encoder method...\n")
             
             cross_encoder = CrossEncoder("cross-encoder/ms-marco-TinyBERT-L2-v2")
 
@@ -248,27 +244,6 @@ def rrf_search(query, k, limit, enhance, rerank):
             for i, curr_res in enumerate(res):
                 curr_res["cross_encoder_score"] = scores[i]
             
-            res.sort(key=lambda x: x.get("cross_encoder_score", -float('inf')), reverse=True)
+            res.sort(key=lambda x: x.get('cross_encoder_score', -float('inf')), reverse=True)
 
-
-    print(f"Reciprocal Rank Fusion Results for '{query}' (k={k}):")
-    for i, curr_res in enumerate(res[:limit], 1): 
-        doc_snippet = curr_res["document"].split("\n")[0][:100]
-        
-        bm25_rank_str = str(curr_res['bm25_rank']) if curr_res['bm25_rank'] > 0 else "N/A"
-        sem_rank_str = str(curr_res['sem_rank']) if curr_res['sem_rank'] > 0 else "N/A"
-
-        print(f"{i}. {curr_res['title']}")
-        
-        if rerank == "batch":
-            print(f"   Rerank Rank: {i}") 
-        elif rerank == "individual":
-            print(f"   Rerank Score: {curr_res.get('llm_rank', 0.0):.3f}/10")
-        elif rerank == "cross_encoder":
-            # Print the new score in the requested format
-            print(f"   Cross Encoder Score: {curr_res.get('cross_encoder_score', 0.0):.3f}")
-        
-        print(f"   RRF Score: {curr_res['rrf_score']:.3f}")
-        print(f"   BM25 Rank: {bm25_rank_str}, Semantic Rank: {sem_rank_str}")
-        print(f"   {doc_snippet}...")
-
+    return res[:limit]
