@@ -8,7 +8,9 @@ from .keyword_search import InvertedIndex
 from .semantic_search import ChunkedSemanticSearch
 from .llm_prompt import Llm
 from sentence_transformers import CrossEncoder
+import logging
 
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class HybridSearch:
     def __init__(self, documents):
@@ -182,11 +184,13 @@ def rrf_search(query, k, limit, enhance, rerank):
     llm = Llm()
     if enhance:
         enhanced_query = llm.enhance_prompt(query, enhance)
+        logging.debug(f"Enhanced query: {enhanced_query}")
         query = enhanced_query 
     
     fetch_limit = limit * 5 
 
     res = hy_search.rrf_search(query, k, fetch_limit)
+    logging.debug(f"RRF results (pre-rerank): {[doc['title'] for doc in res]}")
 
     if rerank:
         
@@ -243,5 +247,6 @@ def rrf_search(query, k, limit, enhance, rerank):
                 curr_res["cross_encoder_score"] = scores[i]
             
             res.sort(key=lambda x: x.get('cross_encoder_score', -float('inf')), reverse=True)
-
-    return res[:limit]
+    final_results = res[:limit]
+    logging.debug(f"Final results (post-rerank): {[doc['title'] for doc in final_results]}")
+    return final_results 

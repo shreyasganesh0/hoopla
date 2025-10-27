@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from google import genai
 
@@ -14,6 +15,46 @@ class Llm:
 
         self.client = genai.Client(api_key=api_key)
 
+    def evaluate_prompt(self, query, formatted_results):
+        """
+        Calls the LLM to evaluate a list of search results against a query.
+
+        Args:
+            query (str): The search query.
+            formatted_results (list[str]): A list of strings, each representing a
+                                           search result (e.g., "Title: Snippet...").
+        """
+        
+        # Use a newline character to join the list of results
+        results_str = "\n".join(formatted_results)
+
+        sys_prompt = f"""Rate how relevant each result is to this query on a 0-3 scale:
+
+            Query: "{query}"
+
+            Results:
+            {results_str}
+
+            Scale:
+            - 3: Highly relevant
+            - 2: Relevant
+            - 1: Marginally relevant
+            - 0: Not relevant
+
+            Do NOT give any numbers out than 0, 1, 2, or 3.
+
+            Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
+
+            [2, 0, 3, 2, 0, 1]"""
+
+        try:
+            model_obj = self.client.models.generate_content(
+                model=self.model, contents=sys_prompt
+            ) #
+            return model_obj.text
+        except Exception as e:
+            print(f"Error calling LLM for evaluation: {e}")
+            return "[]" # Return an empty list string on error
 
     def enhance_prompt(self, query, mode):
 
