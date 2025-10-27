@@ -184,9 +184,7 @@ def rrf_search(query, k, limit, enhance, rerank):
         enhanced_query = llm.enhance_prompt(query, enhance)
         query = enhanced_query 
     
-    fetch_limit = limit
-    if rerank:
-        fetch_limit = limit * 5 
+    fetch_limit = limit * 5 
 
     res = hy_search.rrf_search(query, k, fetch_limit)
 
