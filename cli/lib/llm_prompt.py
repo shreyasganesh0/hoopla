@@ -3,31 +3,44 @@ import json
 from dotenv import load_dotenv
 from google import genai
 
-MODEL = "gemini-2.0-flash-001"
+MODEL = "gemini-2.0-flash-001" # Using the original model name
 
 class Llm:
 
     def __init__(self, model = MODEL):
-
-        self.model = model
+        self.model = model # Keep track of the model name passed or defaulted
         load_dotenv()
         api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables.")
+        self.client = genai.Client(api_key=api_key) # Original client initialization
 
-        self.client = genai.Client(api_key=api_key)
+    # Internal helper consistent with original pattern
+    def _call_llm(self, prompt_text):
+        try:
+            # Original API call method
+            model_obj = self.client.models.generate_content(
+                model=self.model, # Use the stored model name
+                contents=prompt_text
+            )
+            # Original response text access
+            if hasattr(model_obj, 'text'):
+                return model_obj.text
+            elif hasattr(model_obj, 'parts') and model_obj.parts:
+                 return "".join(part.text for part in model_obj.parts if hasattr(part, 'text'))
+            else:
+                 print(f"Warning: LLM response structure unexpected: {model_obj}")
+                 return "Error: Could not extract text from LLM response."
+        except Exception as e:
+            print(f"Error calling LLM: {e}")
+            return f"Error generating response: {e}"
+
+    # New method for RAG, using the original call pattern
+    def generate_answer(self, prompt_text):
+        return self._call_llm(prompt_text)
 
     def evaluate_prompt(self, query, formatted_results):
-        """
-        Calls the LLM to evaluate a list of search results against a query.
-
-        Args:
-            query (str): The search query.
-            formatted_results (list[str]): A list of strings, each representing a
-                                           search result (e.g., "Title: Snippet...").
-        """
-        
-        # Use a newline character to join the list of results
         results_str = "\n".join(formatted_results)
-
         sys_prompt = f"""Rate how relevant each result is to this query on a 0-3 scale:
 
             Query: "{query}"
@@ -46,23 +59,11 @@ class Llm:
             Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
 
             [2, 0, 3, 2, 0, 1]"""
-
-        try:
-            model_obj = self.client.models.generate_content(
-                model=self.model, contents=sys_prompt
-            ) #
-            return model_obj.text
-        except Exception as e:
-            print(f"Error calling LLM for evaluation: {e}")
-            return "[]" # Return an empty list string on error
+        return self._call_llm(sys_prompt)
 
     def enhance_prompt(self, query, mode):
-
-        print(f"Using key {api_key[:6]}...")
-
         sys_prompt = ""
         match(mode):
-
             case "spell":
                 sys_prompt = f"""Fix any spelling errors in this movie search query.
 
@@ -73,7 +74,6 @@ class Llm:
                             If no errors, return the original query.
                             Corrected:"""
             case "rewrite":
-
                 sys_prompt = f"""Rewrite this movie search query to be more specific and searchable.
 
                             Original: "{query}"
@@ -93,7 +93,6 @@ class Llm:
 
                             Rewritten query:"""
             case "expand":
-                
                 sys_prompt = f"""Expand this movie search query with related terms.
 
                             Add synonyms and related concepts that might appear in movie descriptions.
@@ -108,24 +107,22 @@ class Llm:
 
                             Query: "{query}"
                             """
-
-        model_obj = self.client.models.generate_content(model = self.model, contents = sys_prompt) 
-
-        return model_obj.text
+            case _:
+                 return f"Error: Unknown enhancement mode '{mode}'"
+        return self._call_llm(sys_prompt)
 
     def rerank_prompt(self, doc, query, mode):
-
         sys_prompt = ""
-        rank_list = []
-
         match(mode):
-
             case "individual":
-
+                if not isinstance(doc, dict):
+                     return "Error: Invalid document format for individual reranking."
+                title = doc.get("title", "")
+                document_text = doc.get("document", "")
                 sys_prompt = f"""Rate how well this movie matches the search query.
 
                             Query: "{query}"
-                            Movie: {doc.get("title", "")} - {doc.get("document", "")}
+                            Movie: {title} - {document_text}
 
                             Consider:
                             - Direct relevance to query
@@ -148,8 +145,6 @@ class Llm:
 
                             [75, 12, 34, 2, 1]
                             """
-
-        model_obj = self.client.models.generate_content(model = self.model, contents = sys_prompt) 
-
-        return model_obj.text
-
+            case _:
+                 return f"Error: Unknown reranking mode '{mode}'"
+        return self._call_llm(sys_prompt)
