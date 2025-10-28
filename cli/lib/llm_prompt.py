@@ -3,27 +3,24 @@ import json
 from dotenv import load_dotenv
 from google import genai
 
-MODEL = "gemini-2.0-flash-001" # Using the original model name
+MODEL = "gemini-2.0-flash-001"
 
 class Llm:
 
     def __init__(self, model = MODEL):
-        self.model = model # Keep track of the model name passed or defaulted
+        self.model = model
         load_dotenv()
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
-        self.client = genai.Client(api_key=api_key) # Original client initialization
+        self.client = genai.Client(api_key=api_key)
 
-    # Internal helper consistent with original pattern
     def _call_llm(self, prompt_text):
         try:
-            # Original API call method
             model_obj = self.client.models.generate_content(
-                model=self.model, # Use the stored model name
+                model=self.model,
                 contents=prompt_text
             )
-            # Original response text access
             if hasattr(model_obj, 'text'):
                 return model_obj.text
             elif hasattr(model_obj, 'parts') and model_obj.parts:
@@ -35,8 +32,11 @@ class Llm:
             print(f"Error calling LLM: {e}")
             return f"Error generating response: {e}"
 
-    # New method for RAG, using the original call pattern
     def generate_answer(self, prompt_text):
+        return self._call_llm(prompt_text)
+
+    # New method for summarization
+    def generate_summary(self, prompt_text):
         return self._call_llm(prompt_text)
 
     def evaluate_prompt(self, query, formatted_results):
@@ -148,3 +148,6 @@ class Llm:
             case _:
                  return f"Error: Unknown reranking mode '{mode}'"
         return self._call_llm(sys_prompt)
+
+    def generate_answer_with_citations(self, prompt_text):
+            return self._call_llm(prompt_text)
