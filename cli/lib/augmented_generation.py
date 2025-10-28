@@ -9,7 +9,7 @@ def format_docs_for_prompt(results):
     doc_strings = []
     for i, res in enumerate(results, 1):
         title = res.get("title", "N/A")
-        description_snippet = res.get("document", "").split('\n')[0][:200] + "..."
+        description_snippet = res.get("document", "").split('\n')[0][:1000] + "..."
         doc_strings.append(f"{i}. {title}: {description_snippet}")
     return "\n".join(doc_strings)
 
@@ -167,3 +167,59 @@ Answer:"""
         citation_response = "Failed to generate answer with citations."
 
     return search_results, citation_response, error_message
+
+def perform_question_answering(question, limit=DEFAULT_LIMIT):
+    search_results = []
+    answer_response = ""
+    error_message = None
+
+    try:
+        movies = []
+        try:
+            with open("data/movies.json", "r") as f:
+                data = json.load(f)
+                movies = data["movies"]
+        except FileNotFoundError:
+             error_message = "Error: data/movies.json not found."
+             return search_results, answer_response, error_message
+        except json.JSONDecodeError:
+             error_message = "Error: Could not decode data/movies.json."
+             return search_results, answer_response, error_message
+
+        search_results = rrf_search(question, RRF_K, limit, enhance="", rerank="")
+
+        if not search_results:
+            error_message = "No search results found to answer the question."
+            return search_results, answer_response, error_message
+
+    except Exception as e:
+        error_message = f"Error during search: {e}"
+        return search_results, answer_response, error_message
+
+    context = format_docs_for_prompt(search_results)
+
+    prompt = f"""Answer the user's question based on the provided movies that are available on Hoopla.
+
+This should be tailored to Hoopla users. Hoopla is a movie streaming service.
+
+Question: {question}
+
+Documents:
+{context}
+
+Instructions:
+- Answer questions directly and concisely
+- Be casual and conversational
+- Don't be cringe or hype-y
+- Talk like a normal person would in a chat conversation
+
+Answer:"""
+
+    try:
+        llm = Llm()
+        answer_response = llm.generate_question_answer(prompt)
+    except Exception as e:
+        error_message = f"Error generating question answer from LLM: {e}"
+        answer_response = "Failed to generate answer."
+
+    return search_results, answer_response, error_message

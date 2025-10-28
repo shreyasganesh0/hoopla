@@ -1,5 +1,6 @@
 import argparse
-from lib.augmented_generation import perform_rag, perform_summary, perform_rag_with_citations
+from lib.augmented_generation import perform_rag, perform_summary, perform_rag_with_citations, perform_question_answering
+
 def main():
     parser = argparse.ArgumentParser(description="Retrieval Augmented Generation CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
@@ -22,6 +23,14 @@ def main():
     citations_parser.add_argument("query", type=str, help="Search query for citation answer")
     citations_parser.add_argument(
         "--limit", type=int, default=5, help="Number of search results to use for citations"
+    )
+
+    question_parser = subparsers.add_parser(
+    "question", help="Search and answer a question conversationally"
+    )
+    question_parser.add_argument("question", type=str, help="Question to ask based on search results")
+    question_parser.add_argument(
+        "--limit", type=int, default=5, help="Number of search results to provide context"
     )
     args = parser.parse_args()
 
@@ -86,6 +95,27 @@ def main():
                 print(f"  [{i}] {result.get('title', 'N/A')}") 
 
             print("\nLLM Answer:")
+            print(answer)
+
+        case "question":
+            question = args.question
+            limit = args.limit
+            print(f"Performing search to answer question: '{question}' (limit={limit})")
+            search_results, answer, error = perform_question_answering(question, limit)
+
+            if error:
+                print(f"\nError: {error}")
+                if search_results:
+                    print("\nSearch Results (obtained before error):")
+                    for result in search_results:
+                        print(f"  - {result.get('title', 'N/A')}")
+                return
+
+            print("\nSearch Results:")
+            for result in search_results:
+                print(f"  - {result.get('title', 'N/A')}")
+
+            print("\nAnswer:")
             print(answer)
 
         case _:

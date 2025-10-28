@@ -151,3 +151,6 @@ class Llm:
 
     def generate_answer_with_citations(self, prompt_text):
             return self._call_llm(prompt_text)
+
+    def generate_question_answer(self, prompt_text):
+        return self._call_llm(prompt_text)
