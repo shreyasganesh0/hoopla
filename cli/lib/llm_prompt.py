@@ -15,29 +15,33 @@ class Llm:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
         self.client = genai.Client(api_key=api_key)
 
-    def _call_llm(self, prompt_text):
+    def _call_llm(self, prompt_text, contents=None): 
+        target_model = self.model
+        payload = contents if contents is not None else prompt_text
         try:
             model_obj = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt_text
+                model=target_model,
+                contents=payload 
             )
-            if hasattr(model_obj, 'text'):
-                return model_obj.text
-            elif hasattr(model_obj, 'parts') and model_obj.parts:
-                 return "".join(part.text for part in model_obj.parts if hasattr(part, 'text'))
-            else:
-                 print(f"Warning: LLM response structure unexpected: {model_obj}")
-                 return "Error: Could not extract text from LLM response."
+            return model_obj
         except Exception as e:
             print(f"Error calling LLM: {e}")
-            return f"Error generating response: {e}"
+            if "does not support" in str(e).lower() and "image" in str(e).lower():
+                print(f"Warning: Model '{target_model}' might not support image input.")
+            return type('obj', (object,), {'text': f"Error generating response: {e}", 'usage_metadata': None})()
+
+
+    def rewrite_query_with_image(self, parts_list):
+        return self._call_llm(None, contents=parts_list) # Pass None for prompt_text
 
     def generate_answer(self, prompt_text):
-        return self._call_llm(prompt_text)
+        response = self._call_llm(prompt_text)
+        # Safely access text attribute
+        return getattr(response, 'text', "Error: Could not extract text.")
 
-    # New method for summarization
     def generate_summary(self, prompt_text):
-        return self._call_llm(prompt_text)
+        response = self._call_llm(prompt_text)
+        return getattr(response, 'text', "Error: Could not extract text.")
 
     def evaluate_prompt(self, query, formatted_results):
         results_str = "\n".join(formatted_results)
@@ -59,7 +63,9 @@ class Llm:
             Return ONLY the scores in the same order you were given the documents. Return a valid JSON list, nothing else. For example:
 
             [2, 0, 3, 2, 0, 1]"""
-        return self._call_llm(sys_prompt)
+        response = self._call_llm(sys_prompt)
+        return getattr(response, 'text', "Error: Could not extract text.")
+
 
     def enhance_prompt(self, query, mode):
         sys_prompt = ""
@@ -108,15 +114,17 @@ class Llm:
                             Query: "{query}"
                             """
             case _:
-                 return f"Error: Unknown enhancement mode '{mode}'"
-        return self._call_llm(sys_prompt)
+                 return type('obj', (object,), {'text': f"Error: Unknown enhancement mode '{mode}'", 'usage_metadata': None})()
+        response = self._call_llm(sys_prompt)
+        return getattr(response, 'text', "Error: Could not extract text.")
+
 
     def rerank_prompt(self, doc, query, mode):
         sys_prompt = ""
         match(mode):
             case "individual":
                 if not isinstance(doc, dict):
-                     return "Error: Invalid document format for individual reranking."
+                    return type('obj', (object,), {'text': "Error: Invalid document format for individual reranking.", 'usage_metadata': None})()
                 title = doc.get("title", "")
                 document_text = doc.get("document", "")
                 sys_prompt = f"""Rate how well this movie matches the search query.
@@ -146,11 +154,16 @@ class Llm:
                             [75, 12, 34, 2, 1]
                             """
             case _:
-                 return f"Error: Unknown reranking mode '{mode}'"
-        return self._call_llm(sys_prompt)
+                return type('obj', (object,), {'text': f"Error: Unknown reranking mode '{mode}'", 'usage_metadata': None})()
+        response = self._call_llm(sys_prompt)
+        return getattr(response, 'text', "Error: Could not extract text.")
+
 
     def generate_answer_with_citations(self, prompt_text):
-            return self._call_llm(prompt_text)
+        response = self._call_llm(prompt_text)
+        return getattr(response, 'text', "Error: Could not extract text.")
+
 
     def generate_question_answer(self, prompt_text):
-        return self._call_llm(prompt_text)
+        response = self._call_llm(prompt_text)
+        return getattr(response, 'text', "Error: Could not extract text.")
